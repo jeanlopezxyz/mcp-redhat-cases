@@ -489,4 +489,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
 
 ## License
 
-MIT
+[MIT](LICENSE) - Free to use, modify, and distribute.
