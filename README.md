@@ -1,9 +1,8 @@
 # Red Hat Cases MCP Server
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![npm version](https://img.shields.io/npm/v/mcp-redhat-cases)](https://www.npmjs.com/package/mcp-redhat-cases)
 [![Java](https://img.shields.io/badge/Java-21+-orange)](https://adoptium.net/)
-[![GitHub release](https://img.shields.io/github/v/release/jeanlopezxyz/mcp-redhat-cases)](https://github.com/jeanlopezxyz/mcp-redhat-cases/releases/latest)
+[![GitHub release](https://img.shields.io/github/v/release/jeanlopezxyz/mcp-redhat-cases?include_prereleases)](https://github.com/jeanlopezxyz/mcp-redhat-cases/releases/latest)
 
 A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for Red Hat Support Cases and Knowledge Base integration.
 
