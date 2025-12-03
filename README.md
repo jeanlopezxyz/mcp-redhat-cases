@@ -41,6 +41,12 @@ This server supports two MCP transport modes:
 
 ## Installation
 
+### Quick Install (Claude Code CLI)
+
+```bash
+claude mcp add redhat-cases -e REDHAT_TOKEN="your-token-here" -- npx -y mcp-redhat-cases@latest
+```
+
 ### Claude Code
 
 Add to `~/.claude/settings.json`:
