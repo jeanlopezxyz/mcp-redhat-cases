@@ -4,6 +4,7 @@
 [![npm version](https://img.shields.io/npm/v/mcp-redhat-cases)](https://www.npmjs.com/package/mcp-redhat-cases)
 [![Java](https://img.shields.io/badge/Java-21+-orange)](https://adoptium.net/)
 [![GitHub release](https://img.shields.io/github/v/release/jeanlopezxyz/mcp-redhat-cases)](https://github.com/jeanlopezxyz/mcp-redhat-cases/releases/latest)
+[![Docker](https://img.shields.io/badge/ghcr.io-latest-blue?logo=docker)](https://github.com/jeanlopezxyz/mcp-redhat-cases/pkgs/container/mcp-redhat-cases)
 
 A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for Red Hat Support Cases and Knowledge Base integration.
 
