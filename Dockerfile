@@ -1,0 +1,64 @@
+# =============================================================================
+# MCP Red Hat Cases Server - Quarkus Native Multi-stage Build
+# =============================================================================
+# Builds a native executable using Mandrel (Red Hat's GraalVM distribution)
+# and deploys on the smallest possible image (ubi9-quarkus-micro-image)
+#
+# Build:
+#   docker build -t ghcr.io/jeanlopezxyz/mcp-redhat-cases .
+#
+# Run:
+#   docker run -i --rm -p 9080:9080 -e REDHAT_TOKEN=xxx ghcr.io/jeanlopezxyz/mcp-redhat-cases
+#
+# Image size: ~50-100MB (vs ~400MB with JVM)
+# Startup time: ~50ms (vs ~2s with JVM)
+# =============================================================================
+
+# Stage 1: Build Native Executable
+FROM quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 AS build
+
+USER root
+WORKDIR /build
+
+# Copy Maven wrapper and configuration
+COPY --chown=quarkus:quarkus mvnw .
+COPY --chown=quarkus:quarkus .mvn .mvn
+COPY --chown=quarkus:quarkus pom.xml .
+
+# Download dependencies (cached layer)
+USER quarkus
+RUN ./mvnw dependency:go-offline -B && rm -rf target
+
+# Copy source code
+COPY --chown=quarkus:quarkus src src
+
+# Build native executable
+RUN ./mvnw package -DskipTests -Dnative -B
+
+# Stage 2: Runtime (Micro Image - smallest possible)
+FROM quay.io/quarkus/ubi9-quarkus-micro-image:2.0
+
+LABEL maintainer="Jean Lopez"
+LABEL description="MCP Server for Red Hat Cases and Knowledge Base (Native)"
+LABEL io.k8s.display-name="MCP Red Hat Cases Server"
+LABEL io.openshift.tags="mcp,redhat,cases,support,kb,quarkus,native"
+
+WORKDIR /work/
+
+# Setup permissions
+RUN chown 1001 /work \
+    && chmod "g+rwX" /work \
+    && chown 1001:root /work
+
+# Copy native executable from build stage
+COPY --from=build --chown=1001:root --chmod=0755 /build/target/*-runner /work/application
+
+EXPOSE 9080
+
+USER 1001
+
+# Environment variables
+ENV QUARKUS_HTTP_HOST=0.0.0.0
+ENV QUARKUS_HTTP_PORT=9080
+
+ENTRYPOINT ["./application"]
