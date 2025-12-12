@@ -4,9 +4,11 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 
 /**
  * DTO for a Red Hat Knowledge Base article.
+ * Note: Solution fields can be either List<String> (with content) or String ("subscriber_only").
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class KnowledgeBaseArticleDto {
@@ -32,16 +34,10 @@ public class KnowledgeBaseArticleDto {
     @JsonProperty("issue")
     private List<String> issue;
 
-    @JsonProperty("solution_environment")
+    // Solution fields - can be List<String> or String ("subscriber_only")
     private List<String> solutionEnvironment;
-
-    @JsonProperty("solution_rootcause")
     private List<String> solutionRootcause;
-
-    @JsonProperty("solution_resolution")
     private List<String> solutionResolution;
-
-    @JsonProperty("solution_diagnosticsteps")
     private List<String> solutionDiagnosticsteps;
 
     @JsonProperty("lastModifiedDate")
@@ -112,32 +108,59 @@ public class KnowledgeBaseArticleDto {
         return solutionEnvironment;
     }
 
-    public void setSolutionEnvironment(List<String> solutionEnvironment) {
-        this.solutionEnvironment = solutionEnvironment;
+    @JsonSetter("solution_environment")
+    public void setSolutionEnvironment(Object value) {
+        this.solutionEnvironment = convertToList(value);
     }
 
     public List<String> getSolutionRootcause() {
         return solutionRootcause;
     }
 
-    public void setSolutionRootcause(List<String> solutionRootcause) {
-        this.solutionRootcause = solutionRootcause;
+    @JsonSetter("solution_rootcause")
+    public void setSolutionRootcause(Object value) {
+        this.solutionRootcause = convertToList(value);
     }
 
     public List<String> getSolutionResolution() {
         return solutionResolution;
     }
 
-    public void setSolutionResolution(List<String> solutionResolution) {
-        this.solutionResolution = solutionResolution;
+    @JsonSetter("solution_resolution")
+    public void setSolutionResolution(Object value) {
+        this.solutionResolution = convertToList(value);
     }
 
     public List<String> getSolutionDiagnosticsteps() {
         return solutionDiagnosticsteps;
     }
 
-    public void setSolutionDiagnosticsteps(List<String> solutionDiagnosticsteps) {
-        this.solutionDiagnosticsteps = solutionDiagnosticsteps;
+    @JsonSetter("solution_diagnosticsteps")
+    public void setSolutionDiagnosticsteps(Object value) {
+        this.solutionDiagnosticsteps = convertToList(value);
+    }
+
+    /**
+     * Converts a polymorphic JSON value to List<String>.
+     * Handles both List<String> and single String ("subscriber_only").
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> convertToList(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof List) {
+            return (List<String>) value;
+        }
+        if (value instanceof String) {
+            String str = (String) value;
+            // Skip "subscriber_only" marker
+            if ("subscriber_only".equals(str)) {
+                return null;
+            }
+            return List.of(str);
+        }
+        return null;
     }
 
     public String getLastModifiedDate() {
