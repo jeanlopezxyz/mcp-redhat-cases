@@ -235,11 +235,9 @@ async function main() {
       console.error(`Starting MCP server in SSE mode on port ${options.port}...`);
       console.error(`SSE endpoint: http://localhost:${options.port}/mcp/sse`);
     } else {
-      // stdio mode (default) - disable HTTP server to activate stdio transport
-      // The quarkus-mcp-server-stdio extension automatically:
-      // - Redirects stdout to null
-      // - Redirects console logging to stderr
+      // stdio mode (default) - disable HTTP server and enable stdio transport
       javaArgs.push('-Dquarkus.http.host-enabled=false');
+      javaArgs.push('-Dquarkus.mcp.server.stdio.enabled=true');
       javaArgs.push('-Dquarkus.banner.enabled=false');
       javaArgs.push('-Dquarkus.log.level=WARN');
       javaArgs.push('-Dquarkus.mcp.server.traffic-logging.enabled=false');
