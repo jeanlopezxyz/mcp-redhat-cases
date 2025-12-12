@@ -19,8 +19,6 @@ import java.util.List;
  * - troubleshootingGuide: Guide to diagnose and manage existing cases
  * - clusterDiagnosticGuide: OpenShift cluster diagnostics with escalation workflow
  * - executiveSummary: Get an overview of all support cases
- * - knowledgeBaseSearchGuide: Tips for effective KB searches
- * - fullDiagnosticWorkflow: Complete workflow: KB search -> diagnose -> escalate
  */
 public class SupportCasePrompts {
 
@@ -148,9 +146,9 @@ public class SupportCasePrompts {
 
             ## Need More Help?
 
-            - Search Knowledge Base: `searchKnowledgeBase query='your error'`
             - View all your cases: `searchCases`
             - Get statistics: `getStatistics`
+            - Create new case: `createCase`
 
             What would you like to do with case %s?
             """, caseNumber, caseNumber, caseNumber, caseNumber, caseNumber, caseNumber, caseNumber);
@@ -200,23 +198,11 @@ public class SupportCasePrompts {
             mcp_kubernetes_nodes_stats_summary name='node-name'
             ```
 
-            ## Phase 3: Search for Solutions
-
-            Before escalating, search the Knowledge Base:
-            ```
-            searchKnowledgeBase query='CrashLoopBackOff openshift 4' documentType='Solution'
-            ```
-
-            If you find a relevant article:
-            ```
-            getSolution solutionId='article-id'
-            ```
-
-            ## Phase 4: Escalate to Red Hat Support
+            ## Phase 3: Escalate to Red Hat Support
 
             ### When to Escalate
 
-            - Problem persists after trying KB solutions
+            - Problem persists after troubleshooting
             - Suspected product bug
             - Need Red Hat engineering assistance
             - Production impact requires urgent support
@@ -330,207 +316,6 @@ public class SupportCasePrompts {
 
             What information would you like to see first?
             """;
-
-        return PromptMessage.withUserRole(new TextContent(guide));
-    }
-
-    @Prompt(description = "Tips and techniques for effective Red Hat Knowledge Base searches")
-    PromptMessage knowledgeBaseSearchGuide(
-            @PromptArg(description = "Problem or error to search for", defaultValue = "") String problem) {
-
-        String problemDisplay = problem.isBlank() ? "(not specified yet)" : problem;
-
-        String guide = String.format("""
-            # Guide: Search Red Hat Knowledge Base
-
-            ## Your Problem: %s
-
-            ## Search Techniques
-
-            ### 1. Use Error Messages Directly
-
-            Copy the exact error message:
-            ```
-            searchKnowledgeBase query='error: connection refused to database:5432'
-            ```
-
-            ### 2. Combine Keywords
-
-            | Problem | Effective Search |
-            |---------|-----------------|
-            | Pod won't start | `CrashLoopBackOff pod openshift` |
-            | Memory issues | `OOMKilled container memory limit` |
-            | Auth problems | `oauth authentication error 401` |
-            | Cluster unresponsive | `apiserver timeout openshift` |
-            | Certificate errors | `certificate expired x509 openshift` |
-            | Storage issues | `PVC pending mount volume` |
-
-            ### 3. Filter by Document Type
-
-            ```
-            # Proven solutions with steps
-            searchKnowledgeBase query='...' documentType='Solution'
-
-            # Official documentation
-            searchKnowledgeBase query='...' documentType='Documentation'
-
-            # Technical articles
-            searchKnowledgeBase query='...' documentType='Article'
-            ```
-
-            ### 4. Filter by Product
-
-            ```
-            searchKnowledgeBase query='...' product='OpenShift'
-            searchKnowledgeBase query='...' product='RHEL'
-            ```
-
-            ## Workflow
-
-            ```
-            1. searchKnowledgeBase query='your error message' documentType='Solution'
-            2. Review results - note the ID of relevant articles
-            3. getSolution solutionId='article-id'
-            4. Follow the resolution steps
-            5. If no solution found: createCase
-            ```
-
-            ## Example
-
-            ```
-            # Search for CrashLoopBackOff solutions
-            searchKnowledgeBase query='CrashLoopBackOff openshift 4.14' documentType='Solution' maxResults=5
-
-            # Get full solution
-            getSolution solutionId='5049001'
-            ```
-
-            ## No Results?
-
-            - Try fewer, more generic keywords
-            - Remove version numbers
-            - Use the core error message only
-            - If still nothing: create a support case
-
-            What error or problem do you want to search for?
-            """, problemDisplay);
-
-        return PromptMessage.withUserRole(new TextContent(guide));
-    }
-
-    @Prompt(description = "Complete workflow: search Knowledge Base first, then diagnose, and escalate to support if needed")
-    PromptMessage fullDiagnosticWorkflow(
-            @PromptArg(description = "Problem description") String problemDescription,
-            @PromptArg(description = "Affected product", defaultValue = "OpenShift") String product) {
-
-        String guide = String.format("""
-            # Complete Diagnostic Workflow
-
-            ## Problem: %s
-            ## Product: %s
-
-            ---
-
-            ## Phase 1: Search Existing Solutions
-
-            ### Step 1.1: Search Knowledge Base
-            ```
-            searchKnowledgeBase query='%s' product='%s' documentType='Solution'
-            ```
-
-            ### Step 1.2: Review and Apply
-            If relevant results found:
-            ```
-            getSolution solutionId='...'
-            ```
-
-            Follow the diagnostic and resolution steps.
-
-            ---
-
-            ## Phase 2: No Solution Found? Create Case
-
-            ### Step 2.1: Gather Information
-
-            Before creating a case, collect:
-            - Exact product version
-            - Complete error messages
-            - Relevant logs
-            - Steps to reproduce
-            - Business impact
-
-            ### Step 2.2: Verify Product and Version
-            ```
-            listProducts
-            listVersions productCode='%s'
-            ```
-
-            ### Step 2.3: Create Support Case
-            ```
-            createCase
-              title="Brief description of %s"
-              description="
-                Product: %s
-                Version: [from listVersions]
-
-                PROBLEM:
-                %s
-
-                ERROR MESSAGES:
-                [paste exact errors]
-
-                LOGS:
-                [relevant log excerpts]
-
-                STEPS TO REPRODUCE:
-                1. ...
-                2. ...
-
-                IMPACT:
-                [business impact, users affected]
-
-                ATTEMPTED SOLUTIONS:
-                - Searched KB, no applicable solution found
-                - [other steps tried]
-              "
-              product="%s"
-              version="..."
-              priority="NORMAL"
-            ```
-
-            ---
-
-            ## Phase 3: Track and Update
-
-            ### Monitor Case
-            ```
-            getCase caseNumber='...'
-            ```
-
-            ### Add Information
-            ```
-            addComment caseNumber='...' comment='...' author='...'
-            ```
-
-            ### View All Cases
-            ```
-            searchCases
-            ```
-
-            ---
-
-            ## Phase 4: Escalation (if critical)
-
-            For URGENT priority cases:
-            1. Create case with priority='URGENT'
-            2. Call Red Hat 24x7 support line
-            3. Reference the case number
-
-            ---
-
-            Ready to start? Let's search the Knowledge Base first.
-            """, problemDescription, product, problemDescription, product, product,
-                problemDescription, product, problemDescription, product);
 
         return PromptMessage.withUserRole(new TextContent(guide));
     }

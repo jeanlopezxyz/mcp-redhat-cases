@@ -29,7 +29,7 @@ import jakarta.ws.rs.core.Response;
 @ApplicationScoped
 public class HydraClient {
 
-    private static final String HYDRA_BASE_URL = "https://api.access.redhat.com/hydra/rest";
+    private static final String HYDRA_BASE_URL = "https://access.redhat.com/hydra/rest";
     private static final String PATH_PRODUCTS = "/products";
     private static final String PATH_PRODUCT_VERSIONS = "/products/%s/versions";
 

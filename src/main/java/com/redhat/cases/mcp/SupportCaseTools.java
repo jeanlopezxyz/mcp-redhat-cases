@@ -1,12 +1,10 @@
 package com.redhat.cases.mcp;
 
-import com.redhat.cases.service.KnowledgeBaseService;
 import com.redhat.cases.service.ProductService;
 import com.redhat.cases.service.SupportCaseService;
 import com.redhat.cases.model.SupportCase;
 import com.redhat.cases.dto.AccountInfoDto;
 import com.redhat.cases.dto.EntitlementDto;
-import com.redhat.cases.dto.KnowledgeBaseArticleDto;
 import com.redhat.cases.dto.ProductDto;
 import com.redhat.cases.dto.VersionDto;
 
@@ -26,7 +24,7 @@ import java.util.Optional;
 /**
  * MCP Tools for Red Hat Support Case Management.
  *
- * This server provides 12 tools organized in 4 categories:
+ * This server provides 10 tools organized in 3 categories:
  *
  * ACCOUNT:
  * - getAccountInfo: Verify API connection and view account details
@@ -43,19 +41,12 @@ import java.util.Optional;
  * PRODUCTS:
  * - listProducts: Get available Red Hat products for case creation
  * - listVersions: Get available versions for a specific product
- *
- * KNOWLEDGE BASE:
- * - searchKnowledgeBase: Find solutions and articles for technical problems
- * - getSolution: Get the full content of a KB article
  */
 @ApplicationScoped
 public class SupportCaseTools {
 
     @Inject
     SupportCaseService caseService;
-
-    @Inject
-    KnowledgeBaseService kbService;
 
     @Inject
     ProductService productService;
@@ -465,85 +456,4 @@ public class SupportCaseTools {
         });
     }
 
-    // ========== KNOWLEDGE BASE ==========
-
-    @Tool(description = "Search Red Hat Knowledge Base for solutions and articles. " +
-            "Use technical keywords from error messages for best results. " +
-            "Examples: 'CrashLoopBackOff openshift', 'etcd timeout', 'oauth authentication error'. " +
-            "Filter by documentType: 'Solution' (proven fixes), 'Documentation', 'Article'. " +
-            "After finding relevant results, use getSolution to get full content.")
-    Uni<ToolResponse> searchKnowledgeBase(
-            @ToolArg(description = "Search keywords (use error messages or technical terms)") String query,
-            @ToolArg(description = "Maximum number of results", defaultValue = "10") int maxResults,
-            @ToolArg(description = "Filter by product (e.g. 'OpenShift', 'RHEL')", defaultValue = "") String product,
-            @ToolArg(description = "Document type: 'Solution', 'Documentation', 'Article'", defaultValue = "") String documentType) {
-
-        return Uni.createFrom().item(() -> {
-            if (!kbService.isConfigured()) {
-                return ToolResponse.error("Service is not configured. Use getAccountInfo to verify the configuration.");
-            }
-
-            if (query == null || query.isBlank()) {
-                return ToolResponse.error("You must provide a search term.");
-            }
-
-            try {
-                List<KnowledgeBaseArticleDto> results = kbService.search(query, maxResults, product, documentType);
-
-                if (results.isEmpty()) {
-                    return ToolResponse.success(new TextContent(
-                        "No articles found for: " + query + "\n\n" +
-                        "Suggestions:\n" +
-                        "- Try more generic terms\n" +
-                        "- Use keywords from the error message\n" +
-                        "- If no solution found, create a support case with createCase"));
-                }
-
-                StringBuilder sb = new StringBuilder();
-                sb.append("=== Knowledge Base Results (").append(results.size()).append(") ===\n");
-                sb.append("Search: ").append(query).append("\n\n");
-
-                for (int i = 0; i < results.size(); i++) {
-                    sb.append("--- Result ").append(i + 1).append(" ---\n");
-                    sb.append(results.get(i).toSearchSummary()).append("\n");
-                }
-
-                sb.append("\nUse getSolution with the article ID to see the full content.");
-
-                return ToolResponse.success(new TextContent(sb.toString()));
-            } catch (Exception e) {
-                return ToolResponse.error("ERROR searching Knowledge Base: " + e.getMessage());
-            }
-        });
-    }
-
-    @Tool(description = "Get the full content of a Knowledge Base article or solution. " +
-            "Use after searchKnowledgeBase to get complete details including: " +
-            "root cause analysis, diagnostic steps, and resolution instructions. " +
-            "Example: getSolution solutionId='5049001'")
-    Uni<ToolResponse> getSolution(
-            @ToolArg(description = "Article/Solution ID from searchKnowledgeBase results") String solutionId) {
-
-        return Uni.createFrom().item(() -> {
-            if (!kbService.isConfigured()) {
-                return ToolResponse.error("Service is not configured. Use getAccountInfo to verify the configuration.");
-            }
-
-            if (solutionId == null || solutionId.isBlank()) {
-                return ToolResponse.error("You must provide the solution ID.");
-            }
-
-            try {
-                Optional<KnowledgeBaseArticleDto> solution = kbService.getArticle(solutionId);
-
-                if (solution.isEmpty()) {
-                    return ToolResponse.error("Solution not found with ID: " + solutionId);
-                }
-
-                return ToolResponse.success(new TextContent(solution.get().toDetailedString()));
-            } catch (Exception e) {
-                return ToolResponse.error("ERROR getting solution: " + e.getMessage());
-            }
-        });
-    }
 }

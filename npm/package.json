@@ -1,7 +1,7 @@
 {
   "name": "mcp-redhat-cases",
-  "version": "1.0.23",
-  "description": "MCP Server for Red Hat Support Cases and Knowledge Base",
+  "version": "1.0.24",
+  "description": "MCP Server for Red Hat Support Cases",
   "main": "cli.js",
   "bin": {
     "mcp-redhat-cases": "./cli.js"
@@ -14,7 +14,6 @@
     "redhat",
     "support",
     "cases",
-    "knowledge-base",
     "claude",
     "ai"
   ],

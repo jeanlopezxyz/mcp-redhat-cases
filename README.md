@@ -6,7 +6,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/jeanlopezxyz/mcp-redhat-cases)](https://github.com/jeanlopezxyz/mcp-redhat-cases/releases/latest)
 [![Docker](https://img.shields.io/badge/ghcr.io-latest-blue?logo=docker)](https://github.com/jeanlopezxyz/mcp-redhat-cases/pkgs/container/mcp-redhat-cases)
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for Red Hat Support Cases and Knowledge Base integration.
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for Red Hat Support Cases management.
 
 Built with [Quarkus MCP Server](https://docs.quarkiverse.io/quarkus-mcp-server/dev/index.html).
 
@@ -174,7 +174,7 @@ Endpoint: `http://localhost:9080/mcp/sse`
 
 ## Tools
 
-This server provides **12 tools** organized in 4 categories:
+This server provides **10 tools** organized in 3 categories:
 
 ### Account
 
@@ -318,33 +318,6 @@ List available versions for a Red Hat product.
 
 ---
 
-### Knowledge Base
-
-#### `searchKnowledgeBase`
-Search Red Hat Knowledge Base for articles and solutions.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `query` | string | Yes | Search keywords (use error messages for best results) |
-| `maxResults` | integer | No | Maximum results to return (default: `10`) |
-| `product` | string | No | Product filter (e.g.: `OpenShift`, `RHEL`) |
-| `documentType` | string | No | Type: `Solution`, `Documentation`, `Article` |
-
-**Returns:** List of matching articles with ID, title, URL, and summary.
-
----
-
-#### `getSolution`
-Get the full content of a solution or article from the Red Hat Knowledge Base.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `solutionId` | string | Yes | Solution ID from search results (e.g.: `5049001`) |
-
-**Returns:** Full article content including environment, issue, root cause, diagnostic steps, and resolution.
-
----
-
 ## Prompts
 
 | Prompt | Description | Parameters |
@@ -353,8 +326,6 @@ Get the full content of a solution or article from the Red Hat Knowledge Base.
 | `troubleshootingGuide` | Guide to diagnose and manage existing cases | `caseNumber` (required) |
 | `clusterDiagnosticGuide` | OpenShift cluster diagnostics with escalation workflow | `clusterName` (optional) |
 | `executiveSummary` | Get an overview of all support cases with statistics | None |
-| `knowledgeBaseSearchGuide` | Tips for effective KB searches | `problem` (optional) |
-| `fullDiagnosticWorkflow` | Complete workflow: KB search -> diagnose -> escalate | `problemDescription`, `product` |
 
 ---
 
@@ -414,17 +385,6 @@ Use natural language to manage Red Hat support cases. Here are prompts organized
 "Reassign case 03881234 to user jsmith"
 ```
 
-### Knowledge Base
-
-```
-"Search knowledge base for CrashLoopBackOff"
-"Find solutions for etcd timeout errors"
-"Search KB for oauth authentication error"
-"Get the full solution for article 5049001"
-"Find documentation about OpenShift networking"
-"Search for RHEL storage issues"
-```
-
 ### Statistics & Reports
 
 ```
@@ -437,7 +397,7 @@ Use natural language to manage Red Hat support cases. Here are prompts organized
 ### Workflows
 
 ```
-"I have an error: ImagePullBackOff - help me find a solution or create a case"
+"I have an error: ImagePullBackOff - help me create a support case"
 "My OpenShift cluster is down - what should I do?"
 "Guide me through creating a support case"
 "Help me troubleshoot case 03881234"
