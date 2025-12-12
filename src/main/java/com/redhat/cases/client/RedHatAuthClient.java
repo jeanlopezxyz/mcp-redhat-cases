@@ -6,6 +6,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,8 +19,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 /**
- * Cliente para autenticacion con Red Hat SSO.
- * Obtiene y renueva tokens de acceso usando el offline token.
+ * Cliente para autenticacion con Red Hat.
+ * Soporta tokens JWT directos y offline tokens de SSO.
  */
 @ApplicationScoped
 public class RedHatAuthClient {
@@ -30,6 +31,7 @@ public class RedHatAuthClient {
 
     private String cachedAccessToken;
     private Instant tokenExpiry;
+    private Boolean isDirectJwt = null;
 
     @Inject
     public RedHatAuthClient(RedHatApiConfig config, ObjectMapper objectMapper) {
@@ -52,17 +54,74 @@ public class RedHatAuthClient {
     }
 
     /**
-     * Refresca el token de acceso usando el offline token.
+     * Detecta si el token proporcionado es un JWT directo.
+     * Los JWT tienen formato: header.payload.signature (3 partes separadas por puntos)
+     */
+    private boolean isJwtToken(String token) {
+        if (token == null || token.isBlank()) {
+            return false;
+        }
+        String[] parts = token.split("\\.");
+        if (parts.length != 3) {
+            return false;
+        }
+        try {
+            // Intentar decodificar el payload para verificar que es un JWT valido
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+            JsonNode json = objectMapper.readTree(payload);
+            // Si tiene campo "exp", es probablemente un JWT
+            return json.has("exp") || json.has("sub");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Extrae la fecha de expiracion de un token JWT.
+     */
+    private Instant getJwtExpiry(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+            JsonNode json = objectMapper.readTree(payload);
+            if (json.has("exp")) {
+                long expSeconds = json.get("exp").asLong();
+                return Instant.ofEpochSecond(expSeconds);
+            }
+        } catch (Exception e) {
+            // Ignorar errores de parsing
+        }
+        // Por defecto, asumir 1 hora de validez
+        return Instant.now().plusSeconds(3600);
+    }
+
+    /**
+     * Refresca el token de acceso.
+     * Si el token es un JWT directo, lo usa directamente.
+     * Si es un offline token, lo intercambia via SSO.
      */
     private String refreshAccessToken() {
         try {
-            String offlineToken = config.offlineToken()
-                    .orElseThrow(() -> new RuntimeException("Offline token no configurado"));
+            String token = config.offlineToken()
+                    .orElseThrow(() -> new RuntimeException("Token no configurado. Configure REDHAT_TOKEN."));
 
+            // Detectar tipo de token solo una vez
+            if (isDirectJwt == null) {
+                isDirectJwt = isJwtToken(token);
+            }
+
+            if (isDirectJwt) {
+                // Es un JWT directo, usarlo directamente
+                cachedAccessToken = token;
+                tokenExpiry = getJwtExpiry(token);
+                return cachedAccessToken;
+            }
+
+            // Es un offline token, intercambiarlo via SSO
             String requestBody = String.format(
                     "grant_type=refresh_token&client_id=%s&refresh_token=%s",
                     config.sso().clientId(),
-                    offlineToken
+                    token
             );
 
             HttpRequest request = HttpRequest.newBuilder()
@@ -84,7 +143,7 @@ public class RedHatAuthClient {
                 throw new RuntimeException("Error obteniendo token de Red Hat SSO: " + response.statusCode() + " - " + response.body());
             }
         } catch (Exception e) {
-            throw new RuntimeException("Error en autenticacion con Red Hat SSO", e);
+            throw new RuntimeException("Error en autenticacion con Red Hat: " + e.getMessage(), e);
         }
     }
 
