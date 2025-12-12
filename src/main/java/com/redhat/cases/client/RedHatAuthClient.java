@@ -54,8 +54,9 @@ public class RedHatAuthClient {
     }
 
     /**
-     * Detecta si el token proporcionado es un JWT directo.
-     * Los JWT tienen formato: header.payload.signature (3 partes separadas por puntos)
+     * Detecta si el token proporcionado es un JWT directo (access token).
+     * Los offline tokens tienen "typ": "Offline" y NO tienen "exp".
+     * Los access tokens (JWT directos) tienen "exp" y NO tienen "typ": "Offline".
      */
     private boolean isJwtToken(String token) {
         if (token == null || token.isBlank()) {
@@ -66,11 +67,16 @@ public class RedHatAuthClient {
             return false;
         }
         try {
-            // Intentar decodificar el payload para verificar que es un JWT valido
             String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
             JsonNode json = objectMapper.readTree(payload);
-            // Si tiene campo "exp", es probablemente un JWT
-            return json.has("exp") || json.has("sub");
+
+            // Si tiene "typ": "Offline", es un offline token que debe intercambiarse
+            if (json.has("typ") && "Offline".equals(json.get("typ").asText())) {
+                return false;
+            }
+
+            // Si tiene "exp", es un JWT directo (access token)
+            return json.has("exp");
         } catch (Exception e) {
             return false;
         }
