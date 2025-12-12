@@ -13,6 +13,10 @@
 # Stage 1: Build
 FROM registry.access.redhat.com/ubi9/openjdk-21:1.21 AS build
 
+USER root
+RUN microdnf install -y gzip tar && microdnf clean all
+USER 185
+
 WORKDIR /build
 
 # Copy Maven wrapper and pom.xml first (for layer caching)
