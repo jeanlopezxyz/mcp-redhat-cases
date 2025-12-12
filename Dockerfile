@@ -1,58 +1,53 @@
 # =============================================================================
-# MCP Red Hat Cases Server - Quarkus Native Multi-stage Build
+# MCP Red Hat Cases Server - JVM Multi-stage Build
 # =============================================================================
-# Builds a native executable using Mandrel (Red Hat's GraalVM distribution)
-# and deploys on the smallest possible image (ubi9-quarkus-micro-image)
+# Full SSL/TLS support using JVM mode with multi-stage build
 #
 # Build:
-#   docker build -t ghcr.io/jeanlopezxyz/mcp-redhat-cases .
+#   docker build -t mcp-redhat-cases .
 #
 # Run:
-#   docker run -i --rm -p 9080:9080 -e REDHAT_TOKEN=xxx ghcr.io/jeanlopezxyz/mcp-redhat-cases
-#
-# Image size: ~50-100MB (vs ~400MB with JVM)
-# Startup time: ~50ms (vs ~2s with JVM)
+#   docker run -i --rm -p 9080:9080 -e REDHAT_TOKEN=xxx mcp-redhat-cases
 # =============================================================================
 
-# Stage 1: Build Native Executable
-FROM quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 AS build
+# Stage 1: Build
+FROM registry.access.redhat.com/ubi9/openjdk-21:1.21 AS build
 
 WORKDIR /build
 
-# Copy all source files
-COPY --chown=quarkus:quarkus mvnw .
-COPY --chown=quarkus:quarkus .mvn .mvn
-COPY --chown=quarkus:quarkus pom.xml .
-COPY --chown=quarkus:quarkus src src
+# Copy Maven wrapper and pom.xml first (for layer caching)
+COPY --chown=185 mvnw .
+COPY --chown=185 .mvn .mvn
+COPY --chown=185 pom.xml .
 
-# Build native executable (single step to avoid permission issues)
-USER quarkus
-RUN ./mvnw package -DskipTests -Dnative -B
+# Download dependencies (cached if pom.xml unchanged)
+RUN ./mvnw dependency:go-offline -B
 
-# Stage 2: Runtime (Micro Image - smallest possible)
-FROM quay.io/quarkus/ubi9-quarkus-micro-image:2.0
+# Copy source code
+COPY --chown=185 src src
+
+# Build the application
+RUN ./mvnw package -DskipTests -B
+
+# Stage 2: Runtime
+FROM registry.access.redhat.com/ubi9/openjdk-21:1.21
 
 LABEL maintainer="Jean Lopez"
-LABEL description="MCP Server for Red Hat Cases and Knowledge Base (Native)"
+LABEL description="MCP Server for Red Hat Cases and Knowledge Base (JVM)"
 LABEL io.k8s.display-name="MCP Red Hat Cases Server"
-LABEL io.openshift.tags="mcp,redhat,cases,support,kb,quarkus,native"
+LABEL io.openshift.tags="mcp,redhat,cases,support,kb,quarkus"
 
-WORKDIR /work/
-
-# Setup permissions
-RUN chown 1001 /work \
-    && chmod "g+rwX" /work \
-    && chown 1001:root /work
-
-# Copy native executable from build stage
-COPY --from=build --chown=1001:root --chmod=0755 /build/target/*-runner /work/application
+# Copy the built application from build stage
+COPY --from=build --chown=185 /build/target/quarkus-app/lib/ /deployments/lib/
+COPY --from=build --chown=185 /build/target/quarkus-app/*.jar /deployments/
+COPY --from=build --chown=185 /build/target/quarkus-app/app/ /deployments/app/
+COPY --from=build --chown=185 /build/target/quarkus-app/quarkus/ /deployments/quarkus/
 
 EXPOSE 9080
 
-USER 1001
+USER 185
 
-# Environment variables
-ENV QUARKUS_HTTP_HOST=0.0.0.0
-ENV QUARKUS_HTTP_PORT=9080
+ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0 -Dquarkus.http.port=9080 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
 
-ENTRYPOINT ["./application"]
+ENTRYPOINT ["java", "-jar", "/deployments/quarkus-run.jar"]

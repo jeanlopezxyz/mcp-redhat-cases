@@ -10,7 +10,7 @@
 .classpath
 .settings
 
-# Ignore build artifacts (will be rebuilt in container)
+# Ignore build artifacts (build happens inside container)
 target
 
 # Ignore npm package (not needed for Docker build)
